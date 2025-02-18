@@ -14,11 +14,14 @@ import (
 
 const (
 	blockfrostUrl = "https://cardano-mainnet.blockfrost.io/api/v0" // mainnet url
-	blockfrostKey = ""                                             // <--- PUT PRIVATE KEY HERE. See README.md for more info.
+	blockfrostKey = "mainnetRMDHLaOZxWE56910BUa1GV98jgC7dwMG"      // <--- PUT PRIVATE KEY HERE. See README.md for more info.
 	minUtxoValue  = uint64(1_000_000)
 )
 
+// This main method contains some simple blockfrost API calls to familiarize myself with the library. It
+// simply queries a specific address and the latest block, and prints out some chain information.
 func main() {
+	// create a blockfrost client
 	client := blockfrost.NewAPIClient(
 		blockfrost.APIClientOptions{
 			ProjectID:   blockfrostKey,
@@ -27,6 +30,7 @@ func main() {
 		},
 	)
 
+	// get the API info
 	info, err := client.Info(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -34,6 +38,7 @@ func main() {
 
 	fmt.Printf("API Info:\n\tUrl: %s\n\tVersion: %s\n", info.Url, info.Version)
 
+	// query specific address
 	addr, err := client.Address(context.TODO(), "addr1qxs7p80zrnp0gnc32qcrn38lav86mr0xlqwma4caayesu4mqs7v6uqj9rvm6w0cnpnmy5kljy02tmye93dpca48vsh4quu99g4")
 	if err != nil {
 		log.Fatal(err)
@@ -49,28 +54,30 @@ func main() {
 		fmt.Printf("\tStake: %s - %s\n", amt.Quantity, amt.Unit)
 	}
 
+	// query latest block
 	txs, err := client.BlockLatestTransactions(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// loop through txs
-	// for _, tx := range txs {\
-	tx := txs[0]
-	txStr := string(tx)
-	res, err := client.Transaction(context.TODO(), txStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// loop through txs in the latest block
+	for _, tx := range txs {
+		txStr := string(tx)
+		res, err := client.Transaction(context.TODO(), txStr)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	fmt.Println("Block Height", res.BlockHeight)
+		fmt.Println("Block Height", res.BlockHeight)
 
-	// Loop through output amount
-	for _, output := range res.OutputAmount {
-		fmt.Printf("Transaction: %s\n", output)
+		// Loop through output amount
+		for _, output := range res.OutputAmount {
+			fmt.Printf("Transaction: %s\n", output)
+		}
 	}
 }
 
+// createTx creates a transaction that sends lovelace to the receiver address
 func createTx(
 	cardanoCliBinary string,
 	txProvider cardano.ITxProvider,
@@ -164,6 +171,7 @@ func createTx(
 	return txSignedRaw, txHash, nil
 }
 
+// submitTx submits the transaction and waits for it to be included in the blockchain
 func submitTx(
 	ctx context.Context,
 	txProvider cardano.ITxProvider,
@@ -209,6 +217,7 @@ func submitTx(
 	return nil
 }
 
+// sendTransaction wraps the transaction creation and submission process
 func sendTransaction(
 	senderKey string,
 	receiverAddress string,
